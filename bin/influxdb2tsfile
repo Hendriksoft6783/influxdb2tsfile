@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# influxdb2tsfile 启动脚本
+# 用法: bin/influxdb2tsfile <command> [options]
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
+JAR="${PROJECT_DIR}/target/influxdb2tsfile-0.1.0.jar"
+REQUIRED_JAVA_MAJOR=17
+
+if [ ! -f "${JAR}" ]; then
+  echo "未找到 ${JAR} ，请先执行: mvn -DskipTests package" >&2
+  exit 1
+fi
+
+JAVA_BIN=java
+if [ -n "${INFLUXDB2TSFILE_JAVA_HOME:-}" ]; then
+  JAVA_BIN="${INFLUXDB2TSFILE_JAVA_HOME}/bin/java"
+elif [ -n "${JAVA_HOME:-}" ]; then
+  JAVA_BIN="${JAVA_HOME}/bin/java"
+fi
+
+# Apache TsFile 2.4.0 的字节码是 Java 17（class file version 61.0），低于 17 无法加载。
+# 提前检查并给出明确提示，避免出现难懂的 UnsupportedClassVersionError。
+VERSION_LINE="$("${JAVA_BIN}" -version 2>&1 | head -1)"
+JAVA_MAJOR="$(printf '%s' "${VERSION_LINE}" | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p')"
+if [ -z "${JAVA_MAJOR}" ]; then
+  echo "警告：无法识别 Java 版本（${VERSION_LINE}），继续尝试运行" >&2
+elif [ "${JAVA_MAJOR}" -lt "${REQUIRED_JAVA_MAJOR}" ]; then
+  {
+    echo "错误：influxdb2tsfile 需要 JDK ${REQUIRED_JAVA_MAJOR} 及以上，当前为 ${VERSION_LINE}"
+    echo "原因：Apache TsFile 2.4.0 的字节码版本是 Java 17（class file version 61.0）"
+    echo "      低版本 JDK 下只有 --version 这类不加载 TsFile 的命令能跑"
+    echo "      执行 migrate / lp2tsfile / inspect 会报 UnsupportedClassVersionError"
+    echo "解决：export JAVA_HOME=JDK17以上的路径，或用 INFLUXDB2TSFILE_JAVA_HOME 指定 JDK"
+  } >&2
+  exit 1
+fi
+
+JVM_OPTS="${INFLUXDB2TSFILE_JVM_OPTS:-}"
+if [ -z "${JVM_OPTS}" ]; then
+  JVM_OPTS="-Xmx2g"
+fi
+
+exec "${JAVA_BIN}" ${JVM_OPTS} -jar "${JAR}" "$@"

@@ -1,0 +1,56 @@
+# ---- 构建产物 ----
+target/
+build/
+out/
+*.class
+*.jar
+!**/lib/*.jar
+
+# ---- 演示/运行产生的数据（日志、tsfile、清单、截图，体积大且可重新生成）----
+demo-output/
+demo-output*.log
+*.tsfile
+*.tsfile.*
+manifest.json
+!src/**/manifest.json
+
+# ---- 运行时临时文件 ----
+*.log
+!docs/**/*.log
+*.tmp
+*.pid
+
+# ---- IDE / 编辑器 ----
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+.project
+.classpath
+.settings/
+atlassian-ide-plugin.xml
+
+# ---- 操作系统 ----
+.DS_Store
+._*
+Thumbs.db
+
+# ---- 本地私有配置（里面的地址/密码不进仓库）----
+.env
+.env.*
+*.local.conf
+
+# ---- Python 缓存 ----
+__pycache__/
+*.pyc
+
+# ---- 本地演示材料（含本机绝对路径/演示口令/截图清单，只留本地）----
+docs/演示命令.md
+docs/演示*.md
+
+# ---- 本地演示脚本与演示材料（保留在工作目录，不纳入仓库；需要时可 git add -f 加回）----
+examples/demo.sh
+examples/start-demo-servers.sh
+examples/capture-terminal-shots.py
+examples/capture-ui-screenshots.py
