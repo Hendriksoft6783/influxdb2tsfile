@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: [ 'v*' ]
+  workflow_dispatch:   # 支持对已有 tag 重跑: gh workflow run release.yml --ref v1.0.0
 
 permissions:
   contents: write
