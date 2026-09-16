@@ -37,10 +37,33 @@ jobs:
           JAR="target/influxdb2tsfile-${VERSION}.jar"
           TARBALL="dist/influxdb2tsfile-${VERSION}-bin.tar.gz"
           NOTES="docs/releases/${GITHUB_REF_NAME}.md"
-          if [ -f "${NOTES}" ]; then
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "release ${GITHUB_REF_NAME} already exists, uploading assets with --clobber"
+            gh release upload "${GITHUB_REF_NAME}" "${JAR}" "${TARBALL}" --clobber --repo "${GITHUB_REPOSITORY}"
+          elif [ -f "${NOTES}" ]; then
             gh release create "${GITHUB_REF_NAME}" "${JAR}" "${TARBALL}" \
-              --title "influxdb2tsfile ${VERSION}" --notes-file "${NOTES}"
+              --repo "${GITHUB_REPOSITORY}" --title "influxdb2tsfile ${VERSION}" --notes-file "${NOTES}"
           else
             gh release create "${GITHUB_REF_NAME}" "${JAR}" "${TARBALL}" \
-              --title "influxdb2tsfile ${VERSION}" --generate-notes
+              --repo "${GITHUB_REPOSITORY}" --title "influxdb2tsfile ${VERSION}" --generate-notes
           fi
+
+      - name: Verify the published assets (download them back and run)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          WORK="$(mktemp -d)"
+          cd "${WORK}"
+          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --dir .
+          echo '--- assets downloaded from the release ---'
+          ls -la
+          tar xzf "influxdb2tsfile-${VERSION}-bin.tar.gz"
+          cd "influxdb2tsfile-${VERSION}"
+          echo '--- launcher and jar from the downloaded package ---'
+          bin/influxdb2tsfile --version
+          java -jar "lib/influxdb2tsfile-${VERSION}.jar" --version
+          printf 'release_check,host=a value=1.5,count=3i 1700000000000000000\nrelease_check,host=b value=2.5 1700000000000000000\n' > demo.lp
+          bin/influxdb2tsfile lp2tsfile demo.lp -o ./out
+          bin/influxdb2tsfile inspect ./out --manifest ./out/manifest.json
