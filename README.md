@@ -1,47 +1,60 @@
 # influxdb2tsfile
 
-把 InfluxDB 数据迁移到 [Apache TsFile](https://github.com/apache/tsfile) 的命令行工具。
+[![CI](https://github.com/TimechoLab/influxdb2tsfile/actions/workflows/ci.yml/badge.svg)](https://github.com/TimechoLab/influxdb2tsfile/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](#requirements)
 
-> 背景：阿里云 InfluxDB® 版将于 2026-10-23 正式退市（2025-10-23 停止新购、2026-04-23 停止续费扩容）。
-> 本工具用于在退市前把 InfluxDB 中的历史数据完整搬到 TsFile，便于后续用 [TimechoDB](https://www.timecho.com/) / Apache IoTDB / TsFile SDK 继续存储与分析。
+**English** · [中文](README.zh.md)
 
-## 特性
+A command-line tool that migrates InfluxDB data to [Apache TsFile](https://github.com/apache/tsfile).
 
-- 支持 **InfluxDB 1.x**（InfluxQL + 用户名/密码）与 **InfluxDB 2.x**（InfluxQL 兼容接口 + Token），两者命令与参数一致
-- 支持 **离线 line protocol 文件**（`lp2tsfile` 命令）：实例已下线时，可用 `influxd export` / `influx export` 导出的 line protocol 文件完成迁移
-- 自动发现 schema 并映射：measurement → 表，tag → TAG 列，field → FIELD 列，字段类型自动映射（float→DOUBLE、integer/unsigned→INT64、boolean→BOOLEAN、string→STRING）
-- 流式读取 + 分片写入：时间切片（`--time-slice`）、按大小/行数滚动（`--max-file-size` / `--max-rows-per-file`），内存占用可预估
-- 并行迁移（`--parallel`）：每个「工作单元」独立输出文件，互不干扰
-- 断点续传（`--resume`）：失败的单元重跑，已完成单元跳过，不产生重复数据
-- 内置校验：`--verify` 与 `inspect --manifest` 会回读 TsFile 行数并与清单比对
-- 生成 `manifest.json` 迁移清单：逐单元记录文件、行数、时间范围、列映射，便于审计与二次开发
-- 单个 fat-jar，除 JRE 外无外部依赖
+> **Why it exists**: Alibaba Cloud InfluxDB® is being retired — no new purchases after 2025-10-23,
+> no renewals or scaling after 2026-04-23, and the service is terminated on 2026-10-23.
+> This tool moves the historical data out of InfluxDB into columnar TsFile files, so it can keep
+> living in [TimechoDB](https://www.timecho.com/), Apache IoTDB, or any TsFile reader.
 
-## 环境要求
+## Features
 
-| 项目 | 要求 |
+- **InfluxDB 1.x** (InfluxQL, username/password) and **InfluxDB 2.x** (InfluxQL compatibility API, API token) — same commands and options for both
+- **Offline migration** from line protocol files or stdin (`lp2tsfile`), for instances that are already gone
+- **Automatic schema mapping**: measurement → table, tag → TAG column, field → FIELD column, with type mapping (float→DOUBLE, integer/unsigned→INT64, boolean→BOOLEAN, string→STRING)
+- **Streaming read + sharded write**: time slicing (`--time-slice`), rolling by size/rows (`--max-file-size` / `--max-rows-per-file`), predictable memory usage
+- **Parallel export** (`--parallel`): every work unit writes its own files, no shared state
+- **Resumable** (`--resume`): failed units are retried, completed units are skipped, no duplicated rows
+- **Built-in verification**: `--verify` and `inspect --manifest` read the written TsFile files back and compare row counts against the manifest
+- **`manifest.json`** per run: files, row counts, time ranges and column mapping per unit — handy for auditing and for downstream tooling
+- **Single fat-jar**, no external dependency besides the JRE
+
+## Requirements
+
+| Item | Requirement |
 | --- | --- |
-| JDK | **17 及以上**（构建与运行）；TsFile 2.4.0 的字节码是 Java 17，低于 17 会报 `UnsupportedClassVersionError` / `class file version 61.0` |
-| Maven | 3.6 及以上（仅构建需要） |
-| TsFile | 2.4.0（已作为依赖内置） |
+| JDK | **17 or newer** for build and runtime. TsFile 2.4.0 is compiled to Java 17 bytecode; older JDKs fail with `UnsupportedClassVersionError` / `class file version 61.0` |
+| Maven | 3.6 or newer (build only) |
+| Apache TsFile | 2.4.0 (bundled in the fat-jar) |
 
-## 构建
+The launcher script `bin/influxdb2tsfile` checks the JDK version up front and prints a clear message instead of an obscure `UnsupportedClassVersionError`.
+
+## Build
 
 ```bash
-mvn -DskipTests package      # 生成 target/influxdb2tsfile-0.1.0.jar（含全部依赖）
-mvn test                     # 单元测试 + 集成测试（内置 mock InfluxDB，无需真实实例）
+mvn -DskipTests package      # produces target/influxdb2tsfile-0.1.0.jar (dependencies included)
+mvn test                     # unit + integration tests (uses an in-process mock InfluxDB, no real server needed)
 ```
 
-## 快速开始
+## Quick start
 
-### 1. 查看 InfluxDB 中的 schema 与映射关系
+### 1. Inspect the schema and the TsFile mapping
 
 ```bash
 java -jar target/influxdb2tsfile-0.1.0.jar discover \
   --url http://127.0.0.1:8086 --database telegraf --counts
 ```
 
-### 2. 迁移数据
+It prints every measurement with its tags, fields, field types and estimated point count, plus the
+table/column names that will be produced.
+
+### 2. Migrate data
 
 ```bash
 java -jar target/influxdb2tsfile-0.1.0.jar migrate \
@@ -51,45 +64,109 @@ java -jar target/influxdb2tsfile-0.1.0.jar migrate \
   -o /data/tsfile-out --verify
 ```
 
-### 3. 从 line protocol 文件迁移（离线场景）
+InfluxDB 2.x only differs by the credentials:
+
+```bash
+java -jar target/influxdb2tsfile-0.1.0.jar migrate \
+  --url http://127.0.0.1:8086 --database telegraf --token <api-token> \
+  --time-slice 1d --parallel 4 -o /data/tsfile-out --verify
+```
+
+### 3. Offline migration from line protocol
 
 ```bash
 java -jar target/influxdb2tsfile-0.1.0.jar lp2tsfile /backup/export.lp -o /data/tsfile-out
 cat /backup/export.lp | java -jar target/influxdb2tsfile-0.1.0.jar lp2tsfile - -o /data/tsfile-out
 ```
 
-### 4. 查看与校验生成的 TsFile
+### 4. Inspect and verify the result
 
 ```bash
 java -jar target/influxdb2tsfile-0.1.0.jar inspect /data/tsfile-out --rows 3
 java -jar target/influxdb2tsfile-0.1.0.jar inspect /data/tsfile-out --manifest /data/tsfile-out/manifest.json
 ```
 
-完整说明见 **[用户手册](docs/用户手册.md)**，设计说明见 **[设计文档](docs/DESIGN.md)**。
+## Data mapping
 
-## 数据映射规则
-
-| InfluxDB | TsFile（表模型 table model） |
+| InfluxDB | Apache TsFile (table model) |
 | --- | --- |
-| database / bucket | 输出目录（可用 `--table-prefix` 把库名并入表名前缀） |
-| measurement | 表名 table |
-| tag key / value | TAG 列（STRING），一行数据的 tag 组合构成设备 ID（series） |
-| field key | FIELD 列，类型：float→DOUBLE、integer/unsigned→INT64、boolean→BOOLEAN、string→STRING |
-| timestamp | 行时间戳（纳秒，TsFile 原生时间列） |
-| 该行缺失的 field | 该列为 null（bitmap 标记，不占数据空间） |
+| database / bucket | output directory (use `--table-prefix` to keep the database name in the table names) |
+| measurement | table name |
+| tag key / value | TAG column (STRING); the tag values of a row form the device id (series) |
+| field key | FIELD column; float→DOUBLE, integer/unsigned→INT64, boolean→BOOLEAN, string→STRING |
+| timestamp | row timestamp (nanoseconds, the native TsFile time column) |
+| field missing in a row | null (bitmap marked, no data space wasted) |
 
-## 目录结构
+## Commands
+
+| Command | Purpose | Useful options |
+| --- | --- | --- |
+| `migrate` | read from InfluxDB and write TsFile files | `--measurements`, `--measurement-regex`, `--start/--end`, `--time-slice`, `--parallel`, `--resume`, `--verify`, `--dry-run` |
+| `discover` | print measurements, tags, fields and the TsFile mapping | `--counts`, `--json`, `--report <file>` |
+| `lp2tsfile` | convert line protocol files or stdin to TsFile | `--precision`, `--default-time`, `--skip-invalid` |
+| `inspect` | show tables, columns, row counts, devices, time ranges, sample rows | `--rows N`, `--json`, `--manifest <file>` |
+
+Run any command with `--help` for the full option list. Common write options:
+`--max-file-size`, `--batch-size`, `--compression` (UNCOMPRESSED/SNAPPY/GZIP/LZ4/ZSTD/LZMA2),
+`--no-sanitize`, `--exclude-tags`, `--exclude-fields`, `--field-type`, `--type-conflict`.
+
+## Reliability
+
+- A run is split into **work units** (one measurement × one time slice). Each unit owns its files, so units can run in
+  parallel, be retried on their own, and never mix data.
+- Re-running the same command is **idempotent**: the files of a unit are removed before it is rewritten.
+- `--resume` loads the manifest of a previous run, re-validates the recorded output files (existence and size),
+  and only redoes what is missing, failed, or stale.
+- `--verify` (or `inspect --manifest` later) compares the row count of every table in the written files
+  with the manifest; a mismatch exits with code 1.
+
+## Output layout
 
 ```
-src/main/java/com/timecho/influxdb2tsfile/
-├── cli/       命令行入口（migrate、discover、lp2tsfile、inspect）
-├── core/      名称规范化、时间/大小/时长解析、schema 规划、写入选项
-├── source/    数据源：InfluxDB(HTTP + InfluxQL CSV)、line protocol
-├── sink/      TsFile 写入器与迁移清单（manifest）
-├── inspect/   TsFile 读取与统计
-└── pipeline/  工作单元、清单组装、校验
+/data/tsfile-out/
+├── cpu_00000-p0000.tsfile      # measurement cpu, time slice 0, part 0
+├── cpu_00000-p0001.tsfile      #   (rolled because the slice exceeded --max-file-size)
+├── cpu_00001-p0000.tsfile      # time slice 1
+├── mem_00000-p0000.tsfile
+└── manifest.json               # per-unit files, rows, devices, time ranges, column mapping
 ```
+
+## Reading the generated TsFile
+
+```xml
+<dependency>
+  <groupId>org.apache.tsfile</groupId>
+  <artifactId>tsfile</artifactId>
+  <version>2.4.0</version>
+</dependency>
+```
+
+```java
+try (ITsFileReader reader = new TsFileReaderBuilder().file(new File("cpu_00000-p0000.tsfile")).build();
+     ResultSet rs = reader.query("cpu", List.of("host", "usage_idle"), Long.MIN_VALUE, Long.MAX_VALUE)) {
+  while (rs.next()) {
+    long timeNanos = rs.getLong("Time");
+    String host = rs.isNull("host") ? null : rs.getString("host");
+    Double usage = rs.isNull("usage_idle") ? null : rs.getDouble("usage_idle");
+    System.out.println(timeNanos + " " + host + " " + usage);
+  }
+}
+```
+
+## Documentation
+
+- [User guide (Chinese)](docs/用户手册.md) — migration playbook for the Alibaba Cloud retirement, full option reference, FAQ, limitations
+- [Design notes (Chinese)](docs/DESIGN.md) — architecture, mapping specification, work units, manifest, error handling
+
+## Limitations
+
+- Only time-series data is migrated. InfluxDB metadata (users, dashboards, continuous queries, subscriptions, tasks) is out of scope.
+- One measurement maps to one table; migrating multiple databases/buckets into the same directory needs `--table-prefix`.
+- Only the default retention policy is read by default; migrate other RPs explicitly with `--rp`.
+- A field that has multiple data types in InfluxDB must be migrated with `--type-conflict text` (stored as STRING) or fixed at the source.
+- TsFile table-model names are case-insensitive; uppercase keys are lower-cased (the original names are recorded in the manifest).
+- Command line only — there is no web UI, by design.
 
 ## License
 
-Apache License 2.0
+Apache License 2.0 — see [LICENSE](LICENSE).
