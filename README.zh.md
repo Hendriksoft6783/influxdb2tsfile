@@ -7,6 +7,21 @@
 > 背景：阿里云 InfluxDB® 版将于 2026-10-23 正式退市（2025-10-23 停止新购、2026-04-23 停止续费扩容）。
 > 本工具用于在退市前把 InfluxDB 中的历史数据完整搬到 TsFile，便于后续用 [TimechoDB](https://www.timecho.com/) / Apache IoTDB / TsFile SDK 继续存储与分析。
 
+## 下载
+
+发行包在 [Releases](https://github.com/TimechoLab/influxdb2tsfile/releases) 页面：
+
+| 文件 | 说明 |
+| --- | --- |
+| `influxdb2tsfile-<version>-bin.tar.gz` | 解压即用：`bin/influxdb2tsfile` 启动脚本 + `lib/` 下的 fat-jar + 中英文 README + LICENSE |
+| `influxdb2tsfile-<version>.jar` | 单独的 fat-jar（含全部依赖） |
+
+```bash
+tar xzf influxdb2tsfile-1.0.0-bin.tar.gz && cd influxdb2tsfile-1.0.0
+export JAVA_HOME=/path/to/jdk-17      # 需要 JDK 17 及以上
+bin/influxdb2tsfile --help
+```
+
 ## 特性
 
 - 支持 **InfluxDB 1.x**（InfluxQL + 用户名/密码）与 **InfluxDB 2.x**（InfluxQL 兼容接口 + Token），两者命令与参数一致
@@ -32,7 +47,7 @@
 ## 构建
 
 ```bash
-mvn -DskipTests package      # 生成 target/influxdb2tsfile-0.1.0.jar（含全部依赖）
+mvn -DskipTests package      # 生成 target/influxdb2tsfile-1.0.0.jar（含全部依赖）
 mvn test                     # 单元测试 + 集成测试（内置 mock InfluxDB，无需真实实例）
 ```
 
@@ -41,14 +56,14 @@ mvn test                     # 单元测试 + 集成测试（内置 mock InfluxD
 ### 1. 查看 InfluxDB 中的 schema 与映射关系
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar discover \
+java -jar target/influxdb2tsfile-1.0.0.jar discover \
   --url http://127.0.0.1:8086 --database telegraf --counts
 ```
 
 ### 2. 迁移数据
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar migrate \
+java -jar target/influxdb2tsfile-1.0.0.jar migrate \
   --url http://127.0.0.1:8086 --database telegraf \
   --start -90d --end now \
   --time-slice 1d --parallel 4 \
@@ -58,7 +73,7 @@ java -jar target/influxdb2tsfile-0.1.0.jar migrate \
 InfluxDB 2.x 只需换成 Token 认证：
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar migrate \
+java -jar target/influxdb2tsfile-1.0.0.jar migrate \
   --url http://127.0.0.1:8086 --database telegraf --token <api-token> \
   --time-slice 1d --parallel 4 -o /data/tsfile-out --verify
 ```
@@ -66,15 +81,15 @@ java -jar target/influxdb2tsfile-0.1.0.jar migrate \
 ### 3. 从 line protocol 文件迁移（离线场景）
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar lp2tsfile /backup/export.lp -o /data/tsfile-out
-cat /backup/export.lp | java -jar target/influxdb2tsfile-0.1.0.jar lp2tsfile - -o /data/tsfile-out
+java -jar target/influxdb2tsfile-1.0.0.jar lp2tsfile /backup/export.lp -o /data/tsfile-out
+cat /backup/export.lp | java -jar target/influxdb2tsfile-1.0.0.jar lp2tsfile - -o /data/tsfile-out
 ```
 
 ### 4. 查看与校验生成的 TsFile
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar inspect /data/tsfile-out --rows 3
-java -jar target/influxdb2tsfile-0.1.0.jar inspect /data/tsfile-out --manifest /data/tsfile-out/manifest.json
+java -jar target/influxdb2tsfile-1.0.0.jar inspect /data/tsfile-out --rows 3
+java -jar target/influxdb2tsfile-1.0.0.jar inspect /data/tsfile-out --manifest /data/tsfile-out/manifest.json
 ```
 
 完整说明见 **[用户手册](docs/用户手册.md)**，设计说明见 **[设计文档](docs/DESIGN.md)**。

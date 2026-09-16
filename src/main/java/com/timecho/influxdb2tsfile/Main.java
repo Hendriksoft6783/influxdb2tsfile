@@ -30,7 +30,7 @@ import picocli.CommandLine.Command;
 @Command(
     name = "influxdb2tsfile",
     mixinStandardHelpOptions = true,
-    version = "influxdb2tsfile 0.1.0 (Apache TsFile 2.4.0)",
+    version = "influxdb2tsfile 1.0.0 (Apache TsFile 2.4.0)",
     description = "Migrate InfluxDB data (1.x or 2.x) and line protocol files to Apache TsFile.",
     subcommands = {
       MigrateCommand.class,

@@ -13,6 +13,21 @@ A command-line tool that migrates InfluxDB data to [Apache TsFile](https://githu
 > This tool moves the historical data out of InfluxDB into columnar TsFile files, so it can keep
 > living in [TimechoDB](https://www.timecho.com/), Apache IoTDB, or any TsFile reader.
 
+## Download
+
+Prebuilt packages are on the [Releases](https://github.com/TimechoLab/influxdb2tsfile/releases) page:
+
+| File | What it is |
+| --- | --- |
+| `influxdb2tsfile-<version>-bin.tar.gz` | Runnable package: `bin/influxdb2tsfile` launcher + fat-jar in `lib/` + READMEs + LICENSE |
+| `influxdb2tsfile-<version>.jar` | The shaded fat-jar alone |
+
+```bash
+tar xzf influxdb2tsfile-1.0.0-bin.tar.gz && cd influxdb2tsfile-1.0.0
+export JAVA_HOME=/path/to/jdk-17      # JDK 17+ is required
+bin/influxdb2tsfile --help
+```
+
 ## Features
 
 - **InfluxDB 1.x** (InfluxQL, username/password) and **InfluxDB 2.x** (InfluxQL compatibility API, API token) — same commands and options for both
@@ -38,7 +53,7 @@ The launcher script `bin/influxdb2tsfile` checks the JDK version up front and pr
 ## Build
 
 ```bash
-mvn -DskipTests package      # produces target/influxdb2tsfile-0.1.0.jar (dependencies included)
+mvn -DskipTests package      # produces target/influxdb2tsfile-1.0.0.jar (dependencies included)
 mvn test                     # unit + integration tests (uses an in-process mock InfluxDB, no real server needed)
 ```
 
@@ -47,7 +62,7 @@ mvn test                     # unit + integration tests (uses an in-process mock
 ### 1. Inspect the schema and the TsFile mapping
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar discover \
+java -jar target/influxdb2tsfile-1.0.0.jar discover \
   --url http://127.0.0.1:8086 --database telegraf --counts
 ```
 
@@ -57,7 +72,7 @@ table/column names that will be produced.
 ### 2. Migrate data
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar migrate \
+java -jar target/influxdb2tsfile-1.0.0.jar migrate \
   --url http://127.0.0.1:8086 --database telegraf \
   --start -90d --end now \
   --time-slice 1d --parallel 4 \
@@ -67,7 +82,7 @@ java -jar target/influxdb2tsfile-0.1.0.jar migrate \
 InfluxDB 2.x only differs by the credentials:
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar migrate \
+java -jar target/influxdb2tsfile-1.0.0.jar migrate \
   --url http://127.0.0.1:8086 --database telegraf --token <api-token> \
   --time-slice 1d --parallel 4 -o /data/tsfile-out --verify
 ```
@@ -75,15 +90,15 @@ java -jar target/influxdb2tsfile-0.1.0.jar migrate \
 ### 3. Offline migration from line protocol
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar lp2tsfile /backup/export.lp -o /data/tsfile-out
-cat /backup/export.lp | java -jar target/influxdb2tsfile-0.1.0.jar lp2tsfile - -o /data/tsfile-out
+java -jar target/influxdb2tsfile-1.0.0.jar lp2tsfile /backup/export.lp -o /data/tsfile-out
+cat /backup/export.lp | java -jar target/influxdb2tsfile-1.0.0.jar lp2tsfile - -o /data/tsfile-out
 ```
 
 ### 4. Inspect and verify the result
 
 ```bash
-java -jar target/influxdb2tsfile-0.1.0.jar inspect /data/tsfile-out --rows 3
-java -jar target/influxdb2tsfile-0.1.0.jar inspect /data/tsfile-out --manifest /data/tsfile-out/manifest.json
+java -jar target/influxdb2tsfile-1.0.0.jar inspect /data/tsfile-out --rows 3
+java -jar target/influxdb2tsfile-1.0.0.jar inspect /data/tsfile-out --manifest /data/tsfile-out/manifest.json
 ```
 
 ## Data mapping

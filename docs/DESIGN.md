@@ -1,6 +1,6 @@
 # influxdb2tsfile 设计文档
 
-版本 0.1.0 / Apache TsFile 2.4.0
+版本 1.0.0 / Apache TsFile 2.4.0
 
 ## 1. 目标与范围
 

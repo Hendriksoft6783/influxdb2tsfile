@@ -6,7 +6,7 @@
 #   4. verify    回读 TsFile 统计行数并与清单比对
 set -euo pipefail
 
-JAR="$PWD/target/influxdb2tsfile-0.1.0.jar"
+JAR="$PWD/target/influxdb2tsfile-1.0.0.jar"
 URL="http://my-influxdb-host:8086"
 DB="telegraf"
 USER="admin"

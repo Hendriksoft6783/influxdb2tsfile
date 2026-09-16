@@ -56,13 +56,13 @@ jobs:
       - name: Smoke test the jar
         if: matrix.java == '17'
         run: |
-          java -jar target/influxdb2tsfile-0.1.0.jar --version
-          java -jar target/influxdb2tsfile-0.1.0.jar --help
+          java -jar target/influxdb2tsfile-*.jar --version
+          java -jar target/influxdb2tsfile-*.jar --help
 
       - name: Upload the fat-jar
         if: matrix.java == '17'
         uses: actions/upload-artifact@v7
         with:
           name: influxdb2tsfile-fatjar
-          path: target/influxdb2tsfile-0.1.0.jar
+          path: target/influxdb2tsfile-*.jar
           if-no-files-found: error

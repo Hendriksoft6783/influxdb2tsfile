@@ -4,14 +4,29 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
-JAR="${PROJECT_DIR}/target/influxdb2tsfile-0.1.0.jar"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 REQUIRED_JAVA_MAJOR=17
 
-if [ ! -f "${JAR}" ]; then
-  echo "未找到 ${JAR} ，请先执行: mvn -DskipTests package" >&2
+# 在 target/、lib/、脚本上级目录中找 influxdb2tsfile-*.jar（与具体版本号无关）
+find_jar() {
+  local dir candidates jar
+  for dir in "$PROJECT_DIR/target" "$PROJECT_DIR/lib" "$PROJECT_DIR"; do
+    [ -d "$dir" ] || continue
+    candidates="$(ls -1 "$dir"/influxdb2tsfile-*.jar 2>/dev/null | grep -v -E -- "(-sources|-javadoc|original-)" || true)"
+    [ -n "$candidates" ] || continue
+    jar="$(printf '%s\n' "$candidates" | sort -V 2>/dev/null | tail -1)"
+    [ -n "$jar" ] || jar="$(printf '%s\n' "$candidates" | sort | tail -1)"
+    printf "%s" "$jar"
+    return 0
+  done
+  return 1
+}
+
+JAR="$(find_jar)" || {
+  echo "未找到 influxdb2tsfile-*.jar，请先执行: mvn -DskipTests package" >&2
+  echo "（发行包解压后应包含 lib/influxdb2tsfile-<version>.jar）" >&2
   exit 1
-fi
+}
 
 JAVA_BIN=java
 if [ -n "${INFLUXDB2TSFILE_JAVA_HOME:-}" ]; then
